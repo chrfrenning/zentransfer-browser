@@ -93,6 +93,16 @@ export function FilterPanel({ photos, onFilterChange, isExpanded }: FilterPanelP
     onFilterChange(filteredPhotos, activeFilterCount);
   }, [filteredPhotos, onFilterChange, filterState]);
 
+  // Listen for clear filters event from header
+  React.useEffect(() => {
+    const handleClearFilters = () => {
+      clearFilters();
+    };
+
+    window.addEventListener('clearFilters', handleClearFilters);
+    return () => window.removeEventListener('clearFilters', handleClearFilters);
+  }, []);
+
   const handleSearchChange = (searchTerm: string) => {
     setFilterState(prev => ({
       ...prev,
@@ -133,13 +143,35 @@ export function FilterPanel({ photos, onFilterChange, isExpanded }: FilterPanelP
   return (
     <div
       className={`fixed top-16 left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-30 overflow-hidden transition-all duration-300 ease-in-out ${isExpanded
-          ? 'max-h-96 opacity-100 translate-y-0'
+          ? 'max-h-[32rem] opacity-100 translate-y-0'
           : 'max-h-0 opacity-0 -translate-y-2'
         }`}
     >
       <div className="p-4 space-y-4">
-        {/* Search Bar */}
-        <div className="flex gap-4 items-end">
+        {/* Search Bar and File Type Filter */}
+        <div className="flex gap-4 items-end pt-2">
+          {/* File Type Filter */}
+          {availableFileTypes.length > 1 && (
+            <div className="w-48">
+              <label htmlFor="file-type-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                File Type
+              </label>
+              <select
+                id="file-type-filter"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={filterState.fileTypeFilter}
+                onChange={(e) => handleFileTypeFilterChange(e.target.value)}
+              >
+                <option value="">All File Types</option>
+                {availableFileTypes.map(category => (
+                  <option key={category} value={category}>
+                    {getFileTypeLabel(category)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          
           <div className="flex-1">
             <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
               Search Photos
@@ -162,33 +194,11 @@ export function FilterPanel({ photos, onFilterChange, isExpanded }: FilterPanelP
           </button>
         </div>
 
-        {/* File Type Filter */}
-        {availableFileTypes.length > 1 && (
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Filter by File Type</h3>
-            <div className="max-w-xs">
-              <select
-                id="file-type-filter"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={filterState.fileTypeFilter}
-                onChange={(e) => handleFileTypeFilterChange(e.target.value)}
-              >
-                <option value="">All File Types</option>
-                {availableFileTypes.map(category => (
-                  <option key={category} value={category}>
-                    {getFileTypeLabel(category)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-
         {/* Metadata Filters */}
         {availableMetadataKeys.length > 0 && (
           <div>
             <h3 className="text-sm font-medium text-gray-700 mb-3">Filter by Metadata</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 max-h-32 overflow-y-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {availableMetadataKeys.map(key => (
                 <div key={key}>
                   <label htmlFor={`filter-${key}`} className="block text-xs font-medium text-gray-600 mb-1">
