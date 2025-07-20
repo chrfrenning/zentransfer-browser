@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { Photo, FilterState } from '../types';
+import { categorizeFileType, getFileTypeLabel, type FileCategory } from '../utils/fileTypeUtils';
 
 interface FilterPanelProps {
   photos: Photo[];
@@ -9,7 +10,8 @@ interface FilterPanelProps {
 export function FilterPanel({ photos, onFilterChange }: FilterPanelProps) {
   const [filterState, setFilterState] = useState<FilterState>({
     searchTerm: '',
-    metadataFilters: {}
+    metadataFilters: {},
+    fileTypeFilter: ''
   });
 
   const availableMetadataKeys = useMemo(() => {
@@ -22,6 +24,16 @@ export function FilterPanel({ photos, onFilterChange }: FilterPanelProps) {
     return Array.from(keys).sort();
   }, [photos]);
 
+  const availableFileTypes = useMemo(() => {
+    const categories = new Set<FileCategory>();
+    photos.forEach(photo => {
+      if (photo.type) {
+        categories.add(categorizeFileType(photo.type));
+      }
+    });
+    return Array.from(categories).sort();
+  }, [photos]);
+
   const getMetadataValues = (key: string) => {
     const values = new Set<string>();
     photos.forEach(photo => {
@@ -29,11 +41,22 @@ export function FilterPanel({ photos, onFilterChange }: FilterPanelProps) {
         values.add(String(photo.metadata[key]));
       }
     });
-    return Array.from(values).sort();
+    
+    const valuesArray = Array.from(values);
+    
+    // Check if all values are numeric for better sorting
+    const isNumeric = valuesArray.every(val => !isNaN(Number(val)) && val.trim() !== '');
+    
+    if (isNumeric) {
+      return valuesArray.sort((a, b) => Number(a) - Number(b));
+    } else {
+      return valuesArray.sort();
+    }
   };
 
   const filteredPhotos = useMemo(() => {
     return photos.filter(photo => {
+      // Text search filter
       if (filterState.searchTerm) {
         const searchLower = filterState.searchTerm.toLowerCase();
         const filenameMatch = photo.filename.toLowerCase().includes(searchLower);
@@ -43,8 +66,17 @@ export function FilterPanel({ photos, onFilterChange }: FilterPanelProps) {
         if (!filenameMatch && !metadataMatch) return false;
       }
 
+      // File type filter
+      if (filterState.fileTypeFilter) {
+        const photoCategory = photo.type ? categorizeFileType(photo.type) : 'other';
+        if (photoCategory !== filterState.fileTypeFilter) {
+          return false;
+        }
+      }
+
+      // Metadata filters
       for (const [key, value] of Object.entries(filterState.metadataFilters)) {
-        if (value && photo.metadata?.[key] !== value) {
+        if (value && String(photo.metadata?.[key]) !== value) {
           return false;
         }
       }
@@ -74,59 +106,43 @@ export function FilterPanel({ photos, onFilterChange }: FilterPanelProps) {
     }));
   };
 
+  const handleFileTypeFilterChange = (value: string) => {
+    setFilterState(prev => ({
+      ...prev,
+      fileTypeFilter: value
+    }));
+  };
+
   const clearFilters = () => {
     setFilterState({
       searchTerm: '',
-      metadataFilters: {}
+      metadataFilters: {},
+      fileTypeFilter: ''
     });
   };
 
   const hasActiveFilters = filterState.searchTerm || 
+    filterState.fileTypeFilter ||
     Object.values(filterState.metadataFilters).some(v => v);
 
   return (
     <div className="bg-white shadow-md p-4 mb-4 rounded-lg">
-      <div className="flex flex-col lg:flex-row gap-4">
-        <div className="flex-1">
-          <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
-            Search Photos
-          </label>
-          <input
-            type="text"
-            id="search"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Search by filename or metadata..."
-            value={filterState.searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-          />
-        </div>
-
-        {availableMetadataKeys.length > 0 && (
-          <div className="flex flex-wrap gap-4 lg:flex-nowrap">
-            {availableMetadataKeys.slice(0, 3).map(key => (
-              <div key={key} className="min-w-0 flex-1">
-                <label htmlFor={`filter-${key}`} className="block text-sm font-medium text-gray-700 mb-2">
-                  {key.charAt(0).toUpperCase() + key.slice(1)}
-                </label>
-                <select
-                  id={`filter-${key}`}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={String(filterState.metadataFilters[key] || '')}
-                  onChange={(e) => handleMetadataFilterChange(key, e.target.value)}
-                >
-                  <option value="">All {key}</option>
-                  {getMetadataValues(key).map(value => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
+      <div className="space-y-4">
+        {/* Search Bar */}
+        <div className="flex gap-4 items-end">
+          <div className="flex-1">
+            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
+              Search Photos
+            </label>
+            <input
+              type="text"
+              id="search"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Search by filename or metadata..."
+              value={filterState.searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+            />
           </div>
-        )}
-
-        <div className="flex items-end">
           <button
             onClick={clearFilters}
             disabled={!hasActiveFilters}
@@ -135,6 +151,57 @@ export function FilterPanel({ photos, onFilterChange }: FilterPanelProps) {
             Clear Filters
           </button>
         </div>
+
+        {/* File Type Filter */}
+        {availableFileTypes.length > 1 && (
+          <div>
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Filter by File Type</h3>
+            <div className="max-w-xs">
+              <select
+                id="file-type-filter"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={filterState.fileTypeFilter}
+                onChange={(e) => handleFileTypeFilterChange(e.target.value)}
+              >
+                <option value="">All File Types</option>
+                {availableFileTypes.map(category => (
+                  <option key={category} value={category}>
+                    {getFileTypeLabel(category)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Metadata Filters */}
+        {availableMetadataKeys.length > 0 && (
+          <div>
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Filter by Metadata</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {availableMetadataKeys.map(key => (
+                <div key={key}>
+                  <label htmlFor={`filter-${key}`} className="block text-xs font-medium text-gray-600 mb-1">
+                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </label>
+                  <select
+                    id={`filter-${key}`}
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                    value={String(filterState.metadataFilters[key] || '')}
+                    onChange={(e) => handleMetadataFilterChange(key, e.target.value)}
+                  >
+                    <option value="">All</option>
+                    {getMetadataValues(key).map(value => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-3 flex justify-between items-center text-sm text-gray-600">

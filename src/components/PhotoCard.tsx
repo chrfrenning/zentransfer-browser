@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { Photo } from '../types';
 
 interface PhotoCardProps {
@@ -10,16 +10,50 @@ interface PhotoCardProps {
 export function PhotoCard({ photo, width, onClick }: PhotoCardProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState<string>('');
+  const [highResLoaded, setHighResLoaded] = useState(false);
 
   const aspectRatio = photo.width / photo.height;
   const displayHeight = Math.round(width / aspectRatio);
 
-  const imageSource = useMemo(() => {
+  // Generate thumbnail URLs
+  const embeddedThumbnail = useMemo(() => {
     if (photo.thumbnailData) {
       return `data:image/webp;base64,${photo.thumbnailData}`;
     }
-    return photo.thumbnailUrl || photo.url;
-  }, [photo.thumbnailData, photo.thumbnailUrl, photo.url]);
+    return null;
+  }, [photo.thumbnailData]);
+
+  const highResThumbnail = useMemo(() => {
+    if (photo.url) {
+      return `${photo.url}.th.webp`;
+    }
+    return null;
+  }, [photo.url]);
+
+  // Initialize with embedded thumbnail
+  useEffect(() => {
+    if (embeddedThumbnail) {
+      setCurrentImageSrc(embeddedThumbnail);
+    } else if (highResThumbnail) {
+      setCurrentImageSrc(highResThumbnail);
+    }
+  }, [embeddedThumbnail, highResThumbnail]);
+
+  // Load high-res thumbnail progressively
+  useEffect(() => {
+    if (!highResThumbnail || !embeddedThumbnail || highResLoaded) return;
+
+    const img = new Image();
+    img.onload = () => {
+      setCurrentImageSrc(highResThumbnail);
+      setHighResLoaded(true);
+    };
+    img.onerror = () => {
+      // Keep using embedded thumbnail if high-res fails
+    };
+    img.src = highResThumbnail;
+  }, [highResThumbnail, embeddedThumbnail, highResLoaded]);
 
   const handleImageLoad = () => {
     setIsLoading(false);
@@ -76,7 +110,7 @@ export function PhotoCard({ photo, width, onClick }: PhotoCardProps) {
         </div>
       ) : (
         <img
-          src={imageSource}
+          src={currentImageSrc}
           alt={photo.filename}
           className={`w-full rounded-lg object-cover transition-opacity duration-300 relative z-10 ${
             isLoading ? 'opacity-0' : 'opacity-100'

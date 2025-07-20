@@ -1,6 +1,7 @@
 gallery/
 *.raf
 *.RAF
+*.ARW
 *.jpg
 *.JPG
 *.jpeg

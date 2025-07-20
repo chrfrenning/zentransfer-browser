@@ -51,7 +51,8 @@ export class DataLoader {
       const metadataFields = [
         'lens', 'lens_make', 'focal_length', 'focal_length_35mm', 
         'aperture', 'shutter_speed', 'iso', 'exposure_compensation',
-        'flash', 'white_balance', 'metering_mode', 'orientation'
+        'flash', 'white_balance', 'metering_mode', 'orientation',
+        'camera_make', 'camera_model'
       ];
       
       metadataFields.forEach(field => {

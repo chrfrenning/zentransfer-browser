@@ -26,6 +26,8 @@ export interface RawPhotoData {
   flash?: string;
   white_balance?: string;
   metering_mode?: string;
+  camera_make?: string;
+  camera_model?: string;
   [key: string]: any;
 }
 
@@ -50,6 +52,7 @@ export interface Photo {
 export interface FilterState {
   searchTerm: string;
   metadataFilters: Record<string, string | number | boolean>;
+  fileTypeFilter: string;
 }
 
 export interface MasonryColumn {
