@@ -1,1 +1,9 @@
 gallery/
+*.raf
+*.RAF
+*.jpg
+*.JPG
+*.jpeg
+*.webp
+*.jsonl
+*.json

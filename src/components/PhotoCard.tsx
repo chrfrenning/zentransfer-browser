@@ -78,12 +78,11 @@ export function PhotoCard({ photo, width, onClick }: PhotoCardProps) {
         <img
           src={imageSource}
           alt={photo.filename}
-          className={`w-full rounded-lg object-cover transition-opacity duration-300 ${
+          className={`w-full rounded-lg object-cover transition-opacity duration-300 relative z-10 ${
             isLoading ? 'opacity-0' : 'opacity-100'
           }`}
           style={{ 
-            height: `${displayHeight}px`,
-            display: isLoading ? 'none' : 'block'
+            height: `${displayHeight}px`
           }}
           onLoad={handleImageLoad}
           onError={handleImageError}
@@ -91,9 +90,9 @@ export function PhotoCard({ photo, width, onClick }: PhotoCardProps) {
         />
       )}
 
-      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg" />
+      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg pointer-events-none" />
       
-      <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+      <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
         <div className="bg-black bg-opacity-75 text-white p-2 rounded text-sm">
           <div className="truncate font-medium">{photo.filename}</div>
           {photo.metadata && Object.keys(photo.metadata).length > 0 && (

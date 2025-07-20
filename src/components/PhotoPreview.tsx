@@ -122,7 +122,7 @@ export function PhotoPreview({ previewState, onClose, onNavigate }: PhotoPreview
           </div>
         ) : (
           <img
-            src={currentPhoto.url || (currentPhoto.thumbnailData ? `data:image/webp;base64,${currentPhoto.thumbnailData}` : '')}
+            src={currentPhoto.url}
             alt={currentPhoto.filename}
             className={`max-w-full max-h-full object-contain transition-opacity duration-300 ${
               imageLoaded ? 'opacity-100' : 'opacity-0'
