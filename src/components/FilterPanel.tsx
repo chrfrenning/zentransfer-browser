@@ -4,10 +4,11 @@ import { categorizeFileType, getFileTypeLabel, type FileCategory } from '../util
 
 interface FilterPanelProps {
   photos: Photo[];
-  onFilterChange: (filteredPhotos: Photo[]) => void;
+  onFilterChange: (filteredPhotos: Photo[], filterCount: number) => void;
+  isExpanded: boolean;
 }
 
-export function FilterPanel({ photos, onFilterChange }: FilterPanelProps) {
+export function FilterPanel({ photos, onFilterChange, isExpanded }: FilterPanelProps) {
   const [filterState, setFilterState] = useState<FilterState>({
     searchTerm: '',
     metadataFilters: {},
@@ -41,12 +42,12 @@ export function FilterPanel({ photos, onFilterChange }: FilterPanelProps) {
         values.add(String(photo.metadata[key]));
       }
     });
-    
+
     const valuesArray = Array.from(values);
-    
+
     // Check if all values are numeric for better sorting
     const isNumeric = valuesArray.every(val => !isNaN(Number(val)) && val.trim() !== '');
-    
+
     if (isNumeric) {
       return valuesArray.sort((a, b) => Number(a) - Number(b));
     } else {
@@ -86,8 +87,11 @@ export function FilterPanel({ photos, onFilterChange }: FilterPanelProps) {
   }, [photos, filterState]);
 
   React.useEffect(() => {
-    onFilterChange(filteredPhotos);
-  }, [filteredPhotos, onFilterChange]);
+    const activeFilterCount = Object.keys(filterState.metadataFilters).filter(k => filterState.metadataFilters[k]).length +
+      (filterState.searchTerm ? 1 : 0) +
+      (filterState.fileTypeFilter ? 1 : 0);
+    onFilterChange(filteredPhotos, activeFilterCount);
+  }, [filteredPhotos, onFilterChange, filterState]);
 
   const handleSearchChange = (searchTerm: string) => {
     setFilterState(prev => ({
@@ -121,13 +125,19 @@ export function FilterPanel({ photos, onFilterChange }: FilterPanelProps) {
     });
   };
 
-  const hasActiveFilters = filterState.searchTerm || 
+  const hasActiveFilters = filterState.searchTerm ||
     filterState.fileTypeFilter ||
     Object.values(filterState.metadataFilters).some(v => v);
 
+
   return (
-    <div className="bg-white shadow-md p-4 mb-4 rounded-lg">
-      <div className="space-y-4">
+    <div
+      className={`fixed top-16 left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-30 overflow-hidden transition-all duration-300 ease-in-out ${isExpanded
+          ? 'max-h-96 opacity-100 translate-y-0'
+          : 'max-h-0 opacity-0 -translate-y-2'
+        }`}
+    >
+      <div className="p-4 space-y-4">
         {/* Search Bar */}
         <div className="flex gap-4 items-end">
           <div className="flex-1">
@@ -178,7 +188,7 @@ export function FilterPanel({ photos, onFilterChange }: FilterPanelProps) {
         {availableMetadataKeys.length > 0 && (
           <div>
             <h3 className="text-sm font-medium text-gray-700 mb-3">Filter by Metadata</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 max-h-32 overflow-y-auto">
               {availableMetadataKeys.map(key => (
                 <div key={key}>
                   <label htmlFor={`filter-${key}`} className="block text-xs font-medium text-gray-600 mb-1">
@@ -201,17 +211,6 @@ export function FilterPanel({ photos, onFilterChange }: FilterPanelProps) {
               ))}
             </div>
           </div>
-        )}
-      </div>
-
-      <div className="mt-3 flex justify-between items-center text-sm text-gray-600">
-        <span>
-          Showing {filteredPhotos.length} of {photos.length} photos
-        </span>
-        {hasActiveFilters && (
-          <span className="text-blue-600">
-            Filters active
-          </span>
         )}
       </div>
     </div>
